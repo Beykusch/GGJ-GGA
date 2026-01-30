@@ -3,11 +3,11 @@ using UnityEngine;
 public class MaskManager : MonoBehaviour
 {
     // Define the IDs for your layers (matches the numbers in Edit Layers)
-    const int LAYER_PLAYER = 3; 
-    const int LAYER_RED = 6;
-    const int LAYER_BLUE = 7;
-    const int LAYER_GREEN = 8;
-    const int LAYER_YELLOW = 9;
+    const int LAYER_PLAYER = 6; 
+    const int LAYER_RED = 8;
+    const int LAYER_BLUE = 9;
+    const int LAYER_GREEN = 10;
+    const int LAYER_YELLOW = 11;
 
     void EquipRedMask()
     {

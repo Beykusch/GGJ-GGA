@@ -14,7 +14,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1156317089603150756, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 8.056
+      value: 7.351
       objectReference: {fileID: 0}
     - target: {fileID: 1156317089603150756, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_LocalPosition.z
@@ -24,6 +24,10 @@ PrefabInstance:
       propertyPath: m_Constraints
       value: 116
       objectReference: {fileID: 0}
+    - target: {fileID: 3596733099223226528, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 2099569442, guid: 6e07d2892e004be4285593e5d9be7779, type: 3}
     - target: {fileID: 3596733099223226528, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_SortingLayer
       value: 4
@@ -35,6 +39,22 @@ PrefabInstance:
     - target: {fileID: 6265547509827151728, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: dashSpeed
       value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 6714675140819141252, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6714675140819141252, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6714675140819141252, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 6714675140819141252, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.649
       objectReference: {fileID: 0}
     - target: {fileID: 7297492311625133194, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_Name
@@ -50,11 +70,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8657447437917170149, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0.97
+      value: 1.41
       objectReference: {fileID: 0}
     - target: {fileID: 8657447437917170149, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -5.3259706
+      value: 1.19
       objectReference: {fileID: 0}
     - target: {fileID: 8657447437917170149, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_LocalRotation.w
@@ -92,6 +112,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7297492311625133194, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       insertIndex: 3
       addedObject: {fileID: 5749726606795085753}
+    - targetCorrespondingSourceObject: {fileID: 7297492311625133194, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
+      insertIndex: 4
+      addedObject: {fileID: 930206170468619970}
   m_SourcePrefab: {fileID: 100100000, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
 --- !u!1 &544406509202959305 stripped
 GameObject:
@@ -117,7 +140,29 @@ CapsuleCollider:
   m_ProvidesContacts: 1
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.54
-  m_Height: 2.07
+  m_Radius: 0.41
+  m_Height: 1.85
   m_Direction: 1
-  m_Center: {x: 0, y: 0.17, z: 0}
+  m_Center: {x: 0, y: 0.26, z: 0}
+--- !u!95 &930206170468619970
+Animator:
+  serializedVersion: 7
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 544406509202959305}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 17b41e162d3e1af4f81c33694ebdf0b4, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_AnimatePhysics: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0

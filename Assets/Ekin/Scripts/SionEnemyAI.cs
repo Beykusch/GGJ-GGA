@@ -232,46 +232,58 @@ public class SionEnemyAI : MonoBehaviour
 
     // --- ÇARPIŞMA KONTROLLERİ ---
     void OnCollisionEnter(Collision collision)
+{
+    if (currentState == EnemyState.Charging)
     {
-        if (currentState == EnemyState.Charging)
+        // SENARYO 1: OYUNCUYA ÇARPARSA -> KNOCKBACK + STUN
+        if (collision.gameObject.CompareTag("Player"))
         {
-            // SENARYO 1: OYUNCUYA ÇARPARSA -> KNOCKBACK + STUN
-            if (collision.gameObject.CompareTag("Player"))
+            PlayerMovement playerScript = collision.gameObject.GetComponent<PlayerMovement>();
+            if (playerScript != null)
             {
-                // PlayerMovement scriptine ulaşıp fırlatıyoruz
-                PlayerMovement playerScript = collision.gameObject.GetComponent<PlayerMovement>();
-
-                if (playerScript != null)
-                {
-                    Vector3 knockbackDir = (collision.transform.position - transform.position).normalized;
-                    knockbackDir.y = 0.5f; // Hafif yukarı
-
-                    playerScript.GetKnockedBack(knockbackDir, knockbackForce);
-                }
-
-                Debug.Log("Oyuncuya vurdu!");
-
-                StopAllCoroutines();
-                StartCoroutine(ApplyStun()); // Kendini sersemlet
+                Vector3 knockbackDir = (collision.transform.position - transform.position).normalized;
+                knockbackDir.y = 0.5f;
+                playerScript.GetKnockedBack(knockbackDir, knockbackForce);
             }
 
-            // SENARYO 2: KUTUYA ÇARPARSA -> ÖLÜM
-            else if (collision.gameObject.CompareTag("Destructible") || collision.gameObject.layer == myFactionLayer)
-            {
-                Debug.Log("Kutuyu parçaladı ve öldü.");
-                Destroy(collision.gameObject); // Kutuyu yok et
-                Die(); // Kendini öldür
-            }
+            Debug.Log("Oyuncuya vurdu!");
+            StopAllCoroutines();
+            StartCoroutine(ApplyStun());
+        }
 
-            // SENARYO 3: DUVARA ÇARPARSA -> STUN
-            else if (collision.gameObject.layer != LayerMask.NameToLayer("Ground"))
-            {
-                Debug.Log("Duvara tosladı!");
-                StopAllCoroutines();
-                StartCoroutine(ApplyStun());
-            }
+        // SENARYO 2: KUTUYA ÇARPARSA -> GECİKMELİ ÖLÜM / STUN
+        else if (collision.gameObject.CompareTag("Destructible") || collision.gameObject.layer == myFactionLayer)
+        {
+            Debug.Log("Kutuya çarptı! Patlama için bekleniyor...");
+
+            // ÖNEMLİ DEĞİŞİKLİK BURADA:
+            // Hemen Die() çağırma. Bir kare bekle ki Kutu scripti senin "Charging" olduğunu görebilsin.
+            StartCoroutine(HandleCollisionDelay()); 
+        }
+
+        // SENARYO 3: DUVARA ÇARPARSA -> STUN
+        else if (collision.gameObject.layer != LayerMask.NameToLayer("Ground"))
+        {
+            Debug.Log("Duvara tosladı!");
+            StopAllCoroutines();
+            StartCoroutine(ApplyStun());
         }
     }
+}
+
+// Yeni Yardımcı Coroutine
+IEnumerator HandleCollisionDelay()
+{
+    // Fizik hesaplamalarının bitmesi için bir kare bekle
+    yield return null; 
+
+    // ŞİMDİ ölebilir veya sersemleyebilirsin
+    // Eğer patlamada zaten ölecekse Die() çağırmana gerek kalmayabilir (Barrel scripti yok edebilir).
+    // Ama garanti olsun diye buraya ekliyoruz:
+    Die(); 
+    // Veya sersemlemesini istiyorsan: 
+    // StartCoroutine(ApplyStun());
+}
 
     // --- ANIMASYON YÖNETİMİ ---
     void UpdateAnimationState()

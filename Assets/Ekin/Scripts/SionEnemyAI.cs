@@ -3,47 +3,58 @@ using System.Collections;
 
 public class SionEnemyAI : MonoBehaviour
 {
-    public enum EnemyState { Passive, Preparing, Chasing, Charging }
+    // Düşmanın Olası Durumları
+    public enum EnemyState { Passive, Preparing, Chasing, Charging, Stunned }
 
-    [Header("Basic Settings")]
+    [Header("Temel Ayarlar")]
     public EnemyState currentState = EnemyState.Passive;
-    public int myFactionLayer = 8; // Layer ID for Red/Blue etc.
+    public int myFactionLayer = 8; // Kırmızı Layer ID (Editörden kontrol et)
     public Transform playerTarget;
 
-    [Header("Timings")]
-    public float aggressionDelay = 2.0f; // Delay before attacking when mask is equipped
+    [Header("Zamanlamalar")]
+    public float aggressionDelay = 2.0f; // Maske takılınca ne kadar beklesin?
+    public float stunDuration = 2.0f;    // Çarpınca kaç saniye sersemlesin?
 
-    [Header("Dash (Sion R) Settings")]
-    public float dashDuration = 4.0f; // Total duration of the dash
-    public float dashMaxSpeed = 20f;  // Maximum speed to reach
+    [Header("Dash (Sion R) Ayarları")]
+    public float dashDuration = 4.0f; // Dash süresi
+    public float dashMaxSpeed = 20f;  // Ulaşılacak maksimum hız
 
-    [Header("Speed Curve (Very Important)")]
-    [Tooltip("Draw this curve in the Inspector like a bell curve/trapezoid. Low at start, high in middle, low at end.")]
-    public AnimationCurve speedCurve; // Controls acceleration and deceleration
+    [Header("Hız Grafiği")]
+    [Tooltip("Inspector'dan çizilecek grafik. Başta yavaş, ortada hızlı, sonda yavaş.")]
+    public AnimationCurve speedCurve;
 
-    [Header("Movement Settings")]
-    public float moveSpeed = 3f;      // Normal chasing speed
-    public float turnSpeed = 200f;    // Normal turning speed
-    public float attackTriggerDistance = 8f; // Distance to trigger dash
-    [Tooltip("Low value = Low Steer (Straight line), High value = High Steer (Homing missile)")]
+    [Header("Hareket Ayarları")]
+    public float moveSpeed = 3f;      // Normal yürüme hızı
+    public float turnSpeed = 200f;    // Dönüş hızı
+    public float attackTriggerDistance = 8f; // Dash kaç metre kala başlasın?
+    [Tooltip("Düşük değer = Zor döner (Araba gibi), Yüksek değer = Hemen döner")]
     public float dashTurnRate = 30f;
 
+    // --- BİLEŞENLER ---
     private Rigidbody rb;
+    private Animator anim;
+    private SpriteRenderer spriteRenderer;
     private Coroutine aggressionCoroutine;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+
+        // Görsel bileşenleri (Sprite ve Animator) alt objelerde olabilir, onları bulalım
+        anim = GetComponentInChildren<Animator>();
+        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+
+        // Oyuncuyu otomatik bul
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p != null) playerTarget = p.transform;
 
-        // Listen for mask changes
+        // Maske değişim sistemine abone ol
         if (MaskController.Instance != null)
         {
             MaskController.Instance.OnMaskChanged += HandleMaskChange;
         }
 
-        // Create a default curve if none is assigned to prevent errors
+        // Grafik atanmadıysa varsayılan oluştur (Hata vermesin)
         if (speedCurve == null || speedCurve.length == 0)
         {
             speedCurve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(0.5f, 1), new Keyframe(1, 0));
@@ -56,14 +67,35 @@ public class SionEnemyAI : MonoBehaviour
             MaskController.Instance.OnMaskChanged -= HandleMaskChange;
     }
 
-    // Handles logic when the player changes masks
+    // --- GÖRSEL GÜNCELLEMELER (UPDATE) ---
+    void Update()
+    {
+        // Animasyon ve Yön çevirme işlemleri her karede yapılır
+        UpdateAnimationState();
+        HandleSpriteFlip();
+    }
+
+    // --- FİZİKSEL HAREKETLER (FIXED UPDATE) ---
+    void FixedUpdate()
+    {
+        if (playerTarget == null) return;
+
+        // Sadece normal kovalama (Chasing) durumunu burada yönetiyoruz.
+        // Charging ve Stunned durumları Coroutine içinde yönetiliyor.
+        if (currentState == EnemyState.Chasing)
+        {
+            HandleChasing();
+        }
+    }
+
+    // --- MANTIK: MASKE DEĞİŞİMİ ---
     void HandleMaskChange(int activeLayerID)
     {
-        StopAllCoroutines();
+        StopAllCoroutines(); // Saldırı veya Stun varsa iptal et
 
         if (activeLayerID == myFactionLayer)
         {
-            // Correct mask, start the aggression countdown
+            // Doğru maske takıldı, eğer pasifse geri sayımı başlat
             if (currentState == EnemyState.Passive)
             {
                 aggressionCoroutine = StartCoroutine(StartAggressionCooldown());
@@ -71,49 +103,36 @@ public class SionEnemyAI : MonoBehaviour
         }
         else
         {
-            // Wrong mask, calm down
+            // Yanlış maske, hemen sakinleş
             currentState = EnemyState.Passive;
-            rb.linearVelocity = Vector3.zero; // Stop movement
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
         }
     }
 
-    // Cooldown before becoming aggressive
     IEnumerator StartAggressionCooldown()
     {
         currentState = EnemyState.Preparing;
-        // Optional: Play alert sound or effect here
+        // Burada "! - Fark etti" efekti oynatılabilir
         yield return new WaitForSeconds(aggressionDelay);
         currentState = EnemyState.Chasing;
     }
 
-    void FixedUpdate()
-    {
-        if (playerTarget == null) return;
-
-        switch (currentState)
-        {
-            case EnemyState.Chasing:
-                HandleChasing();
-                break;
-                // Charging state is handled within the Coroutine
-        }
-    }
-
-    // 1. Normal Chasing Logic
+    // --- MANTIK: NORMAL KOVALAMA ---
     void HandleChasing()
     {
         float distance = Vector3.Distance(transform.position, playerTarget.position);
 
-        // Within attack range?
+        // Menzile girdiyse Dash (Ulti) başlat
         if (distance <= attackTriggerDistance)
         {
             StartCoroutine(PerformDashAttack());
             return;
         }
 
-        // Move and Rotate towards player normally
+        // Oyuncuya dön ve yürü
         Vector3 direction = (playerTarget.position - transform.position).normalized;
-        direction.y = 0; // Ignore height difference
+        direction.y = 0; // Yükseklik farkını yoksay
 
         Quaternion targetRotation = Quaternion.LookRotation(direction);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, turnSpeed * Time.fixedDeltaTime);
@@ -121,11 +140,11 @@ public class SionEnemyAI : MonoBehaviour
         rb.MovePosition(transform.position + transform.forward * moveSpeed * Time.fixedDeltaTime);
     }
 
-    // 2. Dash Attack Logic (Sion R)
+    // --- MANTIK: SION R (DASH SALDIRISI) ---
     IEnumerator PerformDashAttack()
     {
         currentState = EnemyState.Charging;
-        Debug.Log("DASH STARTED: Accelerating...");
+        Debug.Log("DASH BAŞLADI: İvmeleniyor...");
 
         float timer = 0f;
 
@@ -133,67 +152,131 @@ public class SionEnemyAI : MonoBehaviour
         {
             timer += Time.fixedDeltaTime;
 
-            // 1. Get Speed Multiplier from the Curve (Value between 0 and 1)
+            // 1. Hızı Grafikten Al
             float speedMultiplier = speedCurve.Evaluate(timer / dashDuration);
-
-            // 2. Calculate Current Speed
             float currentSpeed = speedMultiplier * dashMaxSpeed;
 
-            // 3. MOVE FORWARD (With calculated speed)
+            // 2. İleri Git
             rb.MovePosition(transform.position + transform.forward * currentSpeed * Time.fixedDeltaTime);
 
-            // 4. STEERING (Limited turning ability)
+            // 3. Kısıtlı Dönüş (Falso)
             Vector3 directionToPlayer = (playerTarget.position - transform.position).normalized;
             directionToPlayer.y = 0;
 
             if (directionToPlayer != Vector3.zero)
             {
                 Quaternion targetRotation = Quaternion.LookRotation(directionToPlayer);
-                // Rotate slowly towards player to allow dodging
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, dashTurnRate * Time.fixedDeltaTime);
             }
 
             yield return new WaitForFixedUpdate();
         }
 
-        // Dash finished naturally
+        // Çarpışmadan süre bittiyse normale dön
         if (currentState == EnemyState.Charging)
         {
             currentState = EnemyState.Chasing;
-            rb.linearVelocity = Vector3.zero; // Stop sliding
-            Debug.Log("Dash Finished, returning to Chase.");
+            rb.linearVelocity = Vector3.zero;
+            Debug.Log("Dash bitti, tekrar kovalıyor.");
         }
     }
 
-    // Collision Handling
+    // --- MANTIK: STUN (SERSEMLEME) ---
+    IEnumerator ApplyStun()
+    {
+        currentState = EnemyState.Stunned;
+
+        // Fiziği tamamen durdur
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        Debug.Log("DÜŞMAN SERSEMLEDİ! 😵");
+
+        yield return new WaitForSeconds(stunDuration);
+
+        // Maske değişmediyse kaldığı yerden devam et
+        if (currentState == EnemyState.Stunned)
+        {
+            currentState = EnemyState.Chasing;
+            Debug.Log("Düşman kendine geldi.");
+        }
+    }
+
+    // --- ANIMASYON YÖNETİMİ ---
+    void UpdateAnimationState()
+    {
+        if (anim == null) return;
+
+        int stateID = 0; // 0: Idle
+
+        switch (currentState)
+        {
+            case EnemyState.Passive:
+            case EnemyState.Preparing:
+                stateID = 0; // Idle
+                break;
+
+            case EnemyState.Chasing:
+                stateID = 1; // Walk (Kovalama)
+                break;
+
+            case EnemyState.Charging:
+                stateID = 2; // Run / Dash
+                break;
+
+            case EnemyState.Stunned:
+                stateID = 3; // Stun
+                break;
+        }
+
+        anim.SetInteger("State", stateID);
+    }
+
+    void HandleSpriteFlip()
+    {
+        if (playerTarget == null || spriteRenderer == null) return;
+        if (currentState == EnemyState.Stunned) return; // Stun yemişken dönmesin
+
+        Vector3 direction = playerTarget.position - transform.position;
+
+        // Sprite sağa bakıyorsa: direction.x < 0 ise Flip yap.
+        if (direction.x > 0)
+            spriteRenderer.flipX = false;
+        else if (direction.x < 0)
+            spriteRenderer.flipX = true;
+    }
+
+    // --- ÇARPIŞMA KONTROLLERİ ---
     void OnCollisionEnter(Collision collision)
     {
+        // Sadece Dash atarken çarpışmaları kontrol et
         if (currentState == EnemyState.Charging)
         {
-            // If hitting own faction object or a destructible prop
-            if (collision.gameObject.layer == myFactionLayer || collision.gameObject.CompareTag("DestructibleProp"))
+            // 1. Kutuya veya Kendi Rengine Çarparsa
+            if (collision.gameObject.CompareTag("Destructible") || collision.gameObject.layer == myFactionLayer)
             {
-                Debug.Log("SMASH! Prop destroyed.");
+                Debug.Log("GÜM! Obje parçalandı.");
                 Destroy(collision.gameObject);
 
                 StopAllCoroutines();
-                currentState = EnemyState.Chasing;
+                StartCoroutine(ApplyStun()); // STUN YER
             }
-            // If hitting the Player
+            // 2. Oyuncuya Çarparsa
             else if (collision.gameObject.CompareTag("Player"))
             {
-                Debug.Log("Hit the Player!");
-                // Apply damage logic here
+                Debug.Log("Oyuncuya vurdu!");
+                // Hasar kodu buraya...
 
                 StopAllCoroutines();
-                currentState = EnemyState.Chasing;
+                currentState = EnemyState.Chasing; // Oyuncuya vurunca stun yemez, kovalar
             }
-            // If hitting a Wall (that is not ground)
+            // 3. Duvara Çarparsa (Yer hariç)
             else if (collision.gameObject.layer != LayerMask.NameToLayer("Ground"))
             {
-                Debug.Log("Hit a wall!");
+                Debug.Log("Duvara tosladı!");
+
                 StopAllCoroutines();
-                currentState = EnemyState.Chasing;
+                StartCoroutine(ApplyStun()); // STUN YER
             }
         }
     }

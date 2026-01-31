@@ -2,6 +2,12 @@
 
 public class Billboard : MonoBehaviour
 {
+    Transform camTransform;
+
+    void Start()
+    {
+        camTransform = Camera.main.transform;
+    }
     // Unreal'daki "Event Tick"
     void LateUpdate()
     {

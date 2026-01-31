@@ -43,12 +43,23 @@ public class PlayerMovement : MonoBehaviour
         // 3. GÖRSELİ DÖNDÜR (FLIP)
         if (visualObj != null)
         {
-            // Sağa gidiyorsak
+            // First, get the current absolute size (always positive)
+            // This ensures we respect whatever size you set in the Inspector (e.g., 0.2)
+            float sizeX = Mathf.Abs(visualObj.localScale.x);
+            float sizeY = visualObj.localScale.y;
+            float sizeZ = visualObj.localScale.z;
+
+            // Sağa gidiyorsak (Moving Right)
             if (inputX > 0)
-                visualObj.localScale = new Vector3(1, 1, 1);
-            // Sola gidiyorsak (X'i -1 yaparak aynalarız)
+            {
+                visualObj.localScale = new Vector3(sizeX, sizeY, sizeZ);
+            }
+            // Sola gidiyorsak (Moving Left)
             else if (inputX < 0)
-                visualObj.localScale = new Vector3(-1, 1, 1);
+            {
+                // We use negative sizeX to flip it
+                visualObj.localScale = new Vector3(-sizeX, sizeY, sizeZ);
+            }
         }
     }
 

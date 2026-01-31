@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using UnityEngine.UI; // Required for UI
+using UnityEngine.UI;
 using System.Collections;
 
 public class PlayerMovement : MonoBehaviour
@@ -14,33 +14,34 @@ public class PlayerMovement : MonoBehaviour
     public float dashCooldown = 1f;
 
     [Header("Dash FX & UI")]
-    public TrailRenderer dashTrail; // Drag your Trail Renderer here
-    public Image dashCooldownImage; // Drag your "DashFill" UI Image here
+    public TrailRenderer dashTrail;
+    public Image dashCooldownImage;
 
     private Rigidbody rb;
     private Transform camTransform;
-    
+
     private Vector3 moveVelocity;
     private Vector3 lastMoveDir;
-    
+
     private bool isDashing = false;
     private bool canDash = true;
+
+    // --- YENİ EKLENEN DEĞİŞKEN ---
+    private bool isKnockedBack = false; // Savrulma kilidi
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
         if (Camera.main != null) camTransform = Camera.main.transform;
 
-        // Ensure trail is off at start
         if (dashTrail != null) dashTrail.emitting = false;
-        
-        // Ensure UI is full (ready to dash)
         if (dashCooldownImage != null) dashCooldownImage.fillAmount = 1;
     }
 
     void Update()
     {
-        if (isDashing) return;
+        // --- DEĞİŞİKLİK 1: Savruluyorsak Input alma ---
+        if (isDashing || isKnockedBack) return;
 
         // --- INPUTS ---
         float inputX = Input.GetAxisRaw("Horizontal");
@@ -59,7 +60,7 @@ public class PlayerMovement : MonoBehaviour
         Vector3 targetDirection = (camForward * inputZ + camRight * inputX).normalized;
 
         if (targetDirection != Vector3.zero) lastMoveDir = targetDirection;
-        
+
         moveVelocity = targetDirection * moveSpeed;
 
         // --- VISUAL FLIP ---
@@ -79,9 +80,36 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (isDashing) return;
+        // --- DEĞİŞİKLİK 2: Savruluyorsak Hareketi Ezme ---
+        if (isDashing || isKnockedBack) return;
+
         // Apply normal movement
         rb.linearVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z);
+    }
+
+    // --- YENİ EKLENEN FONKSİYON: DIŞARIDAN ÇAĞRILACAK ---
+    public void GetKnockedBack(Vector3 direction, float force)
+    {
+        isKnockedBack = true; // Inputları kilitle
+
+        // Mevcut hızı sıfırla (Temiz bir uçuş için)
+        rb.linearVelocity = Vector3.zero;
+
+        // Gücü uygula (Impulse: Anlık Patlama Gücü)
+        rb.AddForce(direction * force, ForceMode.Impulse);
+
+        // İyileşme sürecini başlat
+        StartCoroutine(RecoverFromKnockback());
+    }
+
+    // --- YENİ EKLENEN COROUTINE: İYİLEŞME SÜRECİ ---
+    IEnumerator RecoverFromKnockback()
+    {
+        // 0.5 saniye (veya ne kadar sürsün istersen) bekle
+        yield return new WaitForSeconds(0.5f);
+
+        // Kontrolü oyuncuya geri ver
+        isKnockedBack = false;
     }
 
     IEnumerator DashRoutine()
@@ -91,12 +119,12 @@ public class PlayerMovement : MonoBehaviour
 
         // 1. START VISUALS
         if (dashTrail != null) dashTrail.emitting = true;
-        if (dashCooldownImage != null) dashCooldownImage.fillAmount = 0; // Empty the UI icon
+        if (dashCooldownImage != null) dashCooldownImage.fillAmount = 0;
 
         // 2. APPLY VELOCITY
         Vector3 dashDir = lastMoveDir;
         if (dashDir == Vector3.zero) dashDir = visualObj.forward;
-        
+
         rb.linearVelocity = new Vector3(dashDir.x * dashSpeed, rb.linearVelocity.y, dashDir.z * dashSpeed);
 
         // 3. WAIT FOR DASH DURATION
@@ -111,12 +139,11 @@ public class PlayerMovement : MonoBehaviour
         while (timer < dashCooldown)
         {
             timer += Time.deltaTime;
-            // Update UI smoothly
             if (dashCooldownImage != null)
             {
                 dashCooldownImage.fillAmount = timer / dashCooldown;
             }
-            yield return null; // Wait for next frame
+            yield return null;
         }
 
         // 6. COOLDOWN FINISHED

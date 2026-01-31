@@ -4,20 +4,24 @@ using System.Collections;
 public class SionEnemyAI : MonoBehaviour
 {
     // Düşmanın Olası Durumları
-    public enum EnemyState { Passive, Preparing, Chasing, Charging, Stunned }
+    public enum EnemyState { Passive, Preparing, Chasing, Charging, Stunned, Dead }
 
     [Header("Temel Ayarlar")]
     public EnemyState currentState = EnemyState.Passive;
-    public int myFactionLayer = 8; // Kırmızı Layer ID (Editörden kontrol et)
+    public int myFactionLayer = 8; // Kırmızı Layer ID
     public Transform playerTarget;
 
     [Header("Zamanlamalar")]
     public float aggressionDelay = 2.0f; // Maske takılınca ne kadar beklesin?
-    public float stunDuration = 2.0f;    // Çarpınca kaç saniye sersemlesin?
+    public float stunDuration = 2.0f;    // Oyuncuya çarpınca kaç sn sersemlesin?
+    public float corpseDuration = 3.0f;  // Ölüsü ne kadar yerde kalsın?
 
     [Header("Dash (Sion R) Ayarları")]
     public float dashDuration = 4.0f; // Dash süresi
     public float dashMaxSpeed = 20f;  // Ulaşılacak maksimum hız
+
+    [Header("Saldırı Gücü")]
+    public float knockbackForce = 15f; // Oyuncuyu fırlatma gücü
 
     [Header("Hız Grafiği")]
     [Tooltip("Inspector'dan çizilecek grafik. Başta yavaş, ortada hızlı, sonda yavaş.")]
@@ -34,13 +38,15 @@ public class SionEnemyAI : MonoBehaviour
     private Rigidbody rb;
     private Animator anim;
     private SpriteRenderer spriteRenderer;
+    private Collider myCollider;
     private Coroutine aggressionCoroutine;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        myCollider = GetComponent<Collider>();
 
-        // Görsel bileşenleri (Sprite ve Animator) alt objelerde olabilir, onları bulalım
+        // Görsel bileşenleri (Sprite ve Animator) alt objelerde olabilir
         anim = GetComponentInChildren<Animator>();
         spriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
@@ -54,7 +60,7 @@ public class SionEnemyAI : MonoBehaviour
             MaskController.Instance.OnMaskChanged += HandleMaskChange;
         }
 
-        // Grafik atanmadıysa varsayılan oluştur (Hata vermesin)
+        // Grafik atanmadıysa varsayılan oluştur
         if (speedCurve == null || speedCurve.length == 0)
         {
             speedCurve = new AnimationCurve(new Keyframe(0, 0), new Keyframe(0.5f, 1), new Keyframe(1, 0));
@@ -67,21 +73,21 @@ public class SionEnemyAI : MonoBehaviour
             MaskController.Instance.OnMaskChanged -= HandleMaskChange;
     }
 
-    // --- GÖRSEL GÜNCELLEMELER (UPDATE) ---
+    // --- GÖRSEL GÜNCELLEMELER ---
     void Update()
     {
-        // Animasyon ve Yön çevirme işlemleri her karede yapılır
         UpdateAnimationState();
         HandleSpriteFlip();
     }
 
-    // --- FİZİKSEL HAREKETLER (FIXED UPDATE) ---
+    // --- FİZİKSEL HAREKETLER ---
     void FixedUpdate()
     {
         if (playerTarget == null) return;
 
-        // Sadece normal kovalama (Chasing) durumunu burada yönetiyoruz.
-        // Charging ve Stunned durumları Coroutine içinde yönetiliyor.
+        // Ölü, Pasif veya Stun yemişse hareket etme
+        if (currentState == EnemyState.Dead || currentState == EnemyState.Passive || currentState == EnemyState.Stunned) return;
+
         if (currentState == EnemyState.Chasing)
         {
             HandleChasing();
@@ -91,19 +97,20 @@ public class SionEnemyAI : MonoBehaviour
     // --- MANTIK: MASKE DEĞİŞİMİ ---
     void HandleMaskChange(int activeLayerID)
     {
+        if (currentState == EnemyState.Dead) return; // Ölüler maske dinlemez
+
         StopAllCoroutines(); // Saldırı veya Stun varsa iptal et
 
         if (activeLayerID == myFactionLayer)
         {
-            // Doğru maske takıldı, eğer pasifse geri sayımı başlat
             if (currentState == EnemyState.Passive)
             {
                 aggressionCoroutine = StartCoroutine(StartAggressionCooldown());
             }
+            // Eğer Stun yemişse dokunmuyoruz, süresi bitince kendine gelir.
         }
         else
         {
-            // Yanlış maske, hemen sakinleş
             currentState = EnemyState.Passive;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
@@ -113,7 +120,6 @@ public class SionEnemyAI : MonoBehaviour
     IEnumerator StartAggressionCooldown()
     {
         currentState = EnemyState.Preparing;
-        // Burada "! - Fark etti" efekti oynatılabilir
         yield return new WaitForSeconds(aggressionDelay);
         currentState = EnemyState.Chasing;
     }
@@ -123,16 +129,14 @@ public class SionEnemyAI : MonoBehaviour
     {
         float distance = Vector3.Distance(transform.position, playerTarget.position);
 
-        // Menzile girdiyse Dash (Ulti) başlat
         if (distance <= attackTriggerDistance)
         {
             StartCoroutine(PerformDashAttack());
             return;
         }
 
-        // Oyuncuya dön ve yürü
         Vector3 direction = (playerTarget.position - transform.position).normalized;
-        direction.y = 0; // Yükseklik farkını yoksay
+        direction.y = 0;
 
         Quaternion targetRotation = Quaternion.LookRotation(direction);
         transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRotation, turnSpeed * Time.fixedDeltaTime);
@@ -144,6 +148,15 @@ public class SionEnemyAI : MonoBehaviour
     IEnumerator PerformDashAttack()
     {
         currentState = EnemyState.Charging;
+
+        // BUG FIX: Dash başlangıcında yüzünü oyuncuya döndür
+        if (playerTarget != null)
+        {
+            Vector3 startDir = (playerTarget.position - transform.position).normalized;
+            startDir.y = 0;
+            if (startDir != Vector3.zero) transform.rotation = Quaternion.LookRotation(startDir);
+        }
+
         Debug.Log("DASH BAŞLADI: İvmeleniyor...");
 
         float timer = 0f;
@@ -152,14 +165,12 @@ public class SionEnemyAI : MonoBehaviour
         {
             timer += Time.fixedDeltaTime;
 
-            // 1. Hızı Grafikten Al
             float speedMultiplier = speedCurve.Evaluate(timer / dashDuration);
             float currentSpeed = speedMultiplier * dashMaxSpeed;
 
-            // 2. İleri Git
             rb.MovePosition(transform.position + transform.forward * currentSpeed * Time.fixedDeltaTime);
 
-            // 3. Kısıtlı Dönüş (Falso)
+            // Kısıtlı Dönüş (Falso)
             Vector3 directionToPlayer = (playerTarget.position - transform.position).normalized;
             directionToPlayer.y = 0;
 
@@ -172,12 +183,10 @@ public class SionEnemyAI : MonoBehaviour
             yield return new WaitForFixedUpdate();
         }
 
-        // Çarpışmadan süre bittiyse normale dön
         if (currentState == EnemyState.Charging)
         {
             currentState = EnemyState.Chasing;
             rb.linearVelocity = Vector3.zero;
-            Debug.Log("Dash bitti, tekrar kovalıyor.");
         }
     }
 
@@ -194,11 +203,73 @@ public class SionEnemyAI : MonoBehaviour
 
         yield return new WaitForSeconds(stunDuration);
 
-        // Maske değişmediyse kaldığı yerden devam et
         if (currentState == EnemyState.Stunned)
         {
             currentState = EnemyState.Chasing;
             Debug.Log("Düşman kendine geldi.");
+        }
+    }
+
+    // --- MANTIK: ÖLÜM ---
+    void Die()
+    {
+        currentState = EnemyState.Dead;
+
+        StopAllCoroutines();
+        rb.linearVelocity = Vector3.zero;
+        rb.isKinematic = true; // Fizikten çıkar
+        if (myCollider != null) myCollider.enabled = false; // Çarpışmayı kapat
+
+        Debug.Log("DÜŞMAN ÖLDÜ!");
+        StartCoroutine(DestroyCorpse());
+    }
+
+    IEnumerator DestroyCorpse()
+    {
+        yield return new WaitForSeconds(corpseDuration);
+        Destroy(gameObject);
+    }
+
+    // --- ÇARPIŞMA KONTROLLERİ ---
+    void OnCollisionEnter(Collision collision)
+    {
+        if (currentState == EnemyState.Charging)
+        {
+            // SENARYO 1: OYUNCUYA ÇARPARSA -> KNOCKBACK + STUN
+            if (collision.gameObject.CompareTag("Player"))
+            {
+                // PlayerMovement scriptine ulaşıp fırlatıyoruz
+                PlayerMovement playerScript = collision.gameObject.GetComponent<PlayerMovement>();
+
+                if (playerScript != null)
+                {
+                    Vector3 knockbackDir = (collision.transform.position - transform.position).normalized;
+                    knockbackDir.y = 0.5f; // Hafif yukarı
+
+                    playerScript.GetKnockedBack(knockbackDir, knockbackForce);
+                }
+
+                Debug.Log("Oyuncuya vurdu!");
+
+                StopAllCoroutines();
+                StartCoroutine(ApplyStun()); // Kendini sersemlet
+            }
+
+            // SENARYO 2: KUTUYA ÇARPARSA -> ÖLÜM
+            else if (collision.gameObject.CompareTag("Destructible") || collision.gameObject.layer == myFactionLayer)
+            {
+                Debug.Log("Kutuyu parçaladı ve öldü.");
+                Destroy(collision.gameObject); // Kutuyu yok et
+                Die(); // Kendini öldür
+            }
+
+            // SENARYO 3: DUVARA ÇARPARSA -> STUN
+            else if (collision.gameObject.layer != LayerMask.NameToLayer("Ground"))
+            {
+                Debug.Log("Duvara tosladı!");
+                StopAllCoroutines();
+                StartCoroutine(ApplyStun());
+            }
         }
     }
 
@@ -207,7 +278,7 @@ public class SionEnemyAI : MonoBehaviour
     {
         if (anim == null) return;
 
-        int stateID = 0; // 0: Idle
+        int stateID = 0;
 
         switch (currentState)
         {
@@ -215,17 +286,17 @@ public class SionEnemyAI : MonoBehaviour
             case EnemyState.Preparing:
                 stateID = 0; // Idle
                 break;
-
             case EnemyState.Chasing:
-                stateID = 1; // Walk (Kovalama)
+                stateID = 1; // Walk
                 break;
-
             case EnemyState.Charging:
-                stateID = 2; // Run / Dash
+                stateID = 2; // Run
                 break;
-
             case EnemyState.Stunned:
                 stateID = 3; // Stun
+                break;
+            case EnemyState.Dead:
+                stateID = 4; // Death
                 break;
         }
 
@@ -235,49 +306,14 @@ public class SionEnemyAI : MonoBehaviour
     void HandleSpriteFlip()
     {
         if (playerTarget == null || spriteRenderer == null) return;
-        if (currentState == EnemyState.Stunned) return; // Stun yemişken dönmesin
+        // Ölü veya Stun yemişse dönemesin
+        if (currentState == EnemyState.Dead || currentState == EnemyState.Stunned) return;
 
         Vector3 direction = playerTarget.position - transform.position;
 
-        // Sprite sağa bakıyorsa: direction.x < 0 ise Flip yap.
         if (direction.x > 0)
             spriteRenderer.flipX = false;
         else if (direction.x < 0)
             spriteRenderer.flipX = true;
-    }
-
-    // --- ÇARPIŞMA KONTROLLERİ ---
-    void OnCollisionEnter(Collision collision)
-    {
-        // Sadece Dash atarken çarpışmaları kontrol et
-        if (currentState == EnemyState.Charging)
-        {
-            // 1. Kutuya veya Kendi Rengine Çarparsa
-            if (collision.gameObject.CompareTag("Destructible") || collision.gameObject.layer == myFactionLayer)
-            {
-                Debug.Log("GÜM! Obje parçalandı.");
-                Destroy(collision.gameObject);
-
-                StopAllCoroutines();
-                StartCoroutine(ApplyStun()); // STUN YER
-            }
-            // 2. Oyuncuya Çarparsa
-            else if (collision.gameObject.CompareTag("Player"))
-            {
-                Debug.Log("Oyuncuya vurdu!");
-                // Hasar kodu buraya...
-
-                StopAllCoroutines();
-                currentState = EnemyState.Chasing; // Oyuncuya vurunca stun yemez, kovalar
-            }
-            // 3. Duvara Çarparsa (Yer hariç)
-            else if (collision.gameObject.layer != LayerMask.NameToLayer("Ground"))
-            {
-                Debug.Log("Duvara tosladı!");
-
-                StopAllCoroutines();
-                StartCoroutine(ApplyStun()); // STUN YER
-            }
-        }
     }
 }

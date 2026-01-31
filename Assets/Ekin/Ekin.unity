@@ -751,6 +751,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: PlayerEkin Variant
       objectReference: {fileID: 0}
+    - target: {fileID: 7096203868382498379, guid: b7f12a27d8ac9f944883a4c39b19d601, type: 3}
+      propertyPath: dashSpeed
+      value: 20
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

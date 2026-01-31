@@ -17,22 +17,23 @@ public class PlayerMovement : MonoBehaviour
     public TrailRenderer dashTrail;
     public Image dashCooldownImage;
 
-    [Header("Knockback Settings (YENİ)")]
-    public float knockbackStunTime = 0.5f; // Havada kontrolsüz kalma süresi
-    public float recoveryDuration = 1.0f;  // Yere indikten sonra hızlanma süresi
+    [Header("Knockback & Recovery (HİBRİT SİSTEM)")]
+    public float knockbackStunTime = 0.5f; // Tuşların kilitli kaldığı süre
+    public float knockbackFriction = 5f;   // Savrulmanın azalma hızı (Fade out)
+    public float recoveryDuration = 1.5f;  // Stun bittikten sonra hızın normale dönme süresi
 
     private Rigidbody rb;
     private Transform camTransform;
 
     private Vector3 moveVelocity;
     private Vector3 lastMoveDir;
+    private Vector3 knockbackVelocity; // Savrulma gücü
 
     private bool isDashing = false;
     private bool canDash = true;
-    private bool isKnockedBack = false;
+    private bool isInputLocked = false;
 
-    // Orijinal hızı hafızada tutmak için
-    private float defaultMoveSpeed;
+    private float defaultMoveSpeed; // Orijinal hızı hafızada tutmak için
 
     void Start()
     {
@@ -42,44 +43,65 @@ public class PlayerMovement : MonoBehaviour
         if (dashTrail != null) dashTrail.emitting = false;
         if (dashCooldownImage != null) dashCooldownImage.fillAmount = 1;
 
-        // Başlangıç hızını kaydet (Ayılınca bu hıza döneceğiz)
+        // Başlangıç hızını kaydet
         defaultMoveSpeed = moveSpeed;
     }
 
     void Update()
     {
-        if (isDashing || isKnockedBack) return;
-
-        // --- INPUTS ---
-        float inputX = Input.GetAxisRaw("Horizontal");
-        float inputZ = Input.GetAxisRaw("Vertical");
-
-        if (camTransform == null) return;
-
-        // --- CALCULATE DIRECTION ---
-        Vector3 camForward = camTransform.forward;
-        Vector3 camRight = camTransform.right;
-        camForward.y = 0;
-        camRight.y = 0;
-        camForward.Normalize();
-        camRight.Normalize();
-
-        Vector3 targetDirection = (camForward * inputZ + camRight * inputX).normalized;
-
-        if (targetDirection != Vector3.zero) lastMoveDir = targetDirection;
-
-        moveVelocity = targetDirection * moveSpeed;
-
-        // --- VISUAL FLIP ---
-        if (visualObj != null)
+        // 1. SİSTEM A: KNOCKBACK FADE OUT (Her karede savrulma azalır)
+        if (knockbackVelocity.magnitude > 0.2f)
         {
-            float sizeX = Mathf.Abs(visualObj.localScale.x);
-            if (inputX > 0) visualObj.localScale = new Vector3(sizeX, visualObj.localScale.y, visualObj.localScale.z);
-            else if (inputX < 0) visualObj.localScale = new Vector3(-sizeX, visualObj.localScale.y, visualObj.localScale.z);
+            knockbackVelocity = Vector3.Lerp(knockbackVelocity, Vector3.zero, knockbackFriction * Time.deltaTime);
+        }
+        else
+        {
+            knockbackVelocity = Vector3.zero;
+        }
+
+        if (isDashing) return;
+
+        // 2. INPUT KONTROLÜ
+        if (isInputLocked)
+        {
+            // Stun yemişsek inputtan gelen hız SIFIRDIR.
+            // Ama karakter knockbackVelocity sayesinde kaymaya devam eder.
+            moveVelocity = Vector3.zero;
+        }
+        else
+        {
+            // --- NORMAL HAREKET ---
+            float inputX = Input.GetAxisRaw("Horizontal");
+            float inputZ = Input.GetAxisRaw("Vertical");
+
+            if (camTransform != null)
+            {
+                Vector3 camForward = camTransform.forward;
+                Vector3 camRight = camTransform.right;
+                camForward.y = 0;
+                camRight.y = 0;
+                camForward.Normalize();
+                camRight.Normalize();
+
+                Vector3 targetDirection = (camForward * inputZ + camRight * inputX).normalized;
+
+                if (targetDirection != Vector3.zero) lastMoveDir = targetDirection;
+
+                // moveSpeed burada recovery süresince yavaş yavaş artacak
+                moveVelocity = targetDirection * moveSpeed;
+
+                // --- VISUAL FLIP ---
+                if (visualObj != null)
+                {
+                    float sizeX = Mathf.Abs(visualObj.localScale.x);
+                    if (inputX > 0) visualObj.localScale = new Vector3(sizeX, visualObj.localScale.y, visualObj.localScale.z);
+                    else if (inputX < 0) visualObj.localScale = new Vector3(-sizeX, visualObj.localScale.y, visualObj.localScale.z);
+                }
+            }
         }
 
         // --- DASH ---
-        if (Input.GetKeyDown(KeyCode.LeftShift) && canDash)
+        if (Input.GetKeyDown(KeyCode.LeftShift) && canDash && !isInputLocked)
         {
             StartCoroutine(DashRoutine());
         }
@@ -87,54 +109,60 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (isDashing || isKnockedBack) return;
+        if (isDashing) return;
 
-        rb.linearVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z);
+        // --- BÜYÜK BİRLEŞME ---
+        // (Yavaş yavaş artan Yürüme Hızı) + (Yavaş yavaş azalan Savrulma Hızı)
+        Vector3 finalVelocity = moveVelocity + knockbackVelocity;
+
+        rb.linearVelocity = new Vector3(finalVelocity.x, rb.linearVelocity.y, finalVelocity.z);
     }
 
     public void GetKnockedBack(Vector3 direction, float force)
     {
-        // Eğer zaten havadaysak tekrar vurulunca bug olmasın, mevcut coroutine'i durdur
-        StopAllCoroutines();
+        StopAllCoroutines(); // Eski recovery veya dash varsa iptal et
 
-        // Hızı ve Inputu sıfırla
-        isKnockedBack = true;
-        moveSpeed = defaultMoveSpeed; // Hız bozulmuşsa düzelt
+        // Değerleri sıfırla
+        moveSpeed = defaultMoveSpeed;
+        isDashing = false;
 
-        rb.linearVelocity = Vector3.zero;
-        rb.AddForce(direction * force, ForceMode.Impulse);
+        // 1. Darbeyi ver
+        knockbackVelocity = direction * force;
 
-        StartCoroutine(RecoverFromKnockback());
+        // 2. Rutini başlat
+        StartCoroutine(KnockbackAndRecoveryRoutine());
     }
 
-    // --- BU KISIM GÜNCELLENDİ: YAVAŞ TOPARLANMA ---
-    IEnumerator RecoverFromKnockback()
+    // --- HEPSİNİ YÖNETEN COROUTINE ---
+    IEnumerator KnockbackAndRecoveryRoutine()
     {
-        // 1. AŞAMA: TAM KİLİT (Havada uçma evresi)
+        // AŞAMA 1: STUN (Tuşlar Kilitli)
+        isInputLocked = true;
+
+        // Bu süre boyunca knockbackVelocity Update'de azalmaya devam ediyor...
         yield return new WaitForSeconds(knockbackStunTime);
 
-        // Input kilidini aç
-        isKnockedBack = false;
+        // AŞAMA 2: RECOVERY (Tuşlar Açık ama Hız Düşük)
+        isInputLocked = false;
 
-        // 2. AŞAMA: YAVAŞ ÇEKİM (Ayılma evresi)
-        // Hızı çok düşür (Örn: Normalin %20'si)
+        // Hızı %20'ye düşür
         float startSpeed = defaultMoveSpeed * 0.2f;
         moveSpeed = startSpeed;
 
         float timer = 0f;
 
-        // Belirlenen süre boyunca hızı yavaş yavaş artır (Lerp)
+        // Belirlenen süre boyunca hızı yavaş yavaş artır
         while (timer < recoveryDuration)
         {
             timer += Time.deltaTime;
 
-            // Hızı zamanla %20'den %100'e çek
+            // Lerp ile hızı artır
             moveSpeed = Mathf.Lerp(startSpeed, defaultMoveSpeed, timer / recoveryDuration);
 
-            yield return null; // Bir sonraki kareyi bekle
+            yield return null;
         }
 
-        // 3. AŞAMA: NORMALE DÖNÜŞ
+        // AŞAMA 3: NORMALE DÖNÜŞ
         moveSpeed = defaultMoveSpeed;
     }
 
@@ -142,6 +170,7 @@ public class PlayerMovement : MonoBehaviour
     {
         isDashing = true;
         canDash = false;
+        knockbackVelocity = Vector3.zero; // Dash atarsan savrulma iptal olsun (Opsiyonel)
 
         if (dashTrail != null) dashTrail.emitting = true;
         if (dashCooldownImage != null) dashCooldownImage.fillAmount = 0;

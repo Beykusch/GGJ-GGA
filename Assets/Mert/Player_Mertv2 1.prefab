@@ -10,15 +10,19 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1156317089603150756, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -6
+      value: -8
       objectReference: {fileID: 0}
     - target: {fileID: 1156317089603150756, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 6.0559998
+      value: 8.056
       objectReference: {fileID: 0}
     - target: {fileID: 1156317089603150756, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -6
+      value: -8
+      objectReference: {fileID: 0}
+    - target: {fileID: 1481699643035867357, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
+      propertyPath: m_Constraints
+      value: 116
       objectReference: {fileID: 0}
     - target: {fileID: 3596733099223226528, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_SortingLayer
@@ -35,6 +39,10 @@ PrefabInstance:
     - target: {fileID: 7297492311625133194, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_Name
       value: Player_Mertv2 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 7297492311625133194, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
+      propertyPath: m_TagString
+      value: Player
       objectReference: {fileID: 0}
     - target: {fileID: 8657447437917170149, guid: d2bc265d70e9ea7469585e05c6ed0ef6, type: 3}
       propertyPath: m_LocalPosition.x

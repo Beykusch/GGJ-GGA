@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
-using System.Collections; // Required for Coroutines
+using UnityEngine.UI; // Required for UI
+using System.Collections;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -8,46 +9,48 @@ public class PlayerMovement : MonoBehaviour
     public Transform visualObj;
 
     [Header("Dash Settings")]
-    public float dashSpeed = 20f;      // How fast you dash
-    public float dashDuration = 0.2f;  // How long the dash lasts (short is snappy)
-    public float dashCooldown = 1f;    // Time before you can dash again
+    public float dashSpeed = 20f;
+    public float dashDuration = 0.2f;
+    public float dashCooldown = 1f;
+
+    [Header("Dash FX & UI")]
+    public TrailRenderer dashTrail; // Drag your Trail Renderer here
+    public Image dashCooldownImage; // Drag your "DashFill" UI Image here
 
     private Rigidbody rb;
-    private Transform camTransform;    // Optimization: Cached Camera
+    private Transform camTransform;
     
-    // Movement Variables
-    private Vector3 movementInput;
     private Vector3 moveVelocity;
-    private Vector3 lastMoveDir;       // Stores the last direction we moved (for dashing while standing still)
+    private Vector3 lastMoveDir;
     
-    // State Variables
     private bool isDashing = false;
     private bool canDash = true;
 
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        
-        // Cache Camera for performance
         if (Camera.main != null) camTransform = Camera.main.transform;
+
+        // Ensure trail is off at start
+        if (dashTrail != null) dashTrail.emitting = false;
+        
+        // Ensure UI is full (ready to dash)
+        if (dashCooldownImage != null) dashCooldownImage.fillAmount = 1;
     }
 
     void Update()
     {
-        // 1. IF DASHING, IGNORE INPUTS
         if (isDashing) return;
 
-        // 2. MOVEMENT INPUTS
+        // --- INPUTS ---
         float inputX = Input.GetAxisRaw("Horizontal");
         float inputZ = Input.GetAxisRaw("Vertical");
 
-        // Safety check for camera
         if (camTransform == null) return;
 
-        // 3. CALCULATE DIRECTION
+        // --- CALCULATE DIRECTION ---
         Vector3 camForward = camTransform.forward;
         Vector3 camRight = camTransform.right;
-
         camForward.y = 0;
         camRight.y = 0;
         camForward.Normalize();
@@ -55,69 +58,69 @@ public class PlayerMovement : MonoBehaviour
 
         Vector3 targetDirection = (camForward * inputZ + camRight * inputX).normalized;
 
-        // Save direction for dashing (if we are moving)
-        if (targetDirection != Vector3.zero)
-        {
-            lastMoveDir = targetDirection;
-        }
-
+        if (targetDirection != Vector3.zero) lastMoveDir = targetDirection;
+        
         moveVelocity = targetDirection * moveSpeed;
 
-        // 4. VISUAL FLIP
+        // --- VISUAL FLIP ---
         if (visualObj != null)
         {
             float sizeX = Mathf.Abs(visualObj.localScale.x);
-            float sizeY = visualObj.localScale.y;
-            float sizeZ = visualObj.localScale.z;
-
-            if (inputX > 0)
-                visualObj.localScale = new Vector3(sizeX, sizeY, sizeZ);
-            else if (inputX < 0)
-                visualObj.localScale = new Vector3(-sizeX, sizeY, sizeZ);
+            if (inputX > 0) visualObj.localScale = new Vector3(sizeX, visualObj.localScale.y, visualObj.localScale.z);
+            else if (inputX < 0) visualObj.localScale = new Vector3(-sizeX, visualObj.localScale.y, visualObj.localScale.z);
         }
 
-        // 5. DASH INPUT (Left Shift)
+        // --- DASH ---
         if (Input.GetKeyDown(KeyCode.LeftShift) && canDash)
         {
-            StartCoroutine(Dash());
+            StartCoroutine(DashRoutine());
         }
     }
 
     void FixedUpdate()
     {
-        // If dashing, we don't apply normal movement code here
-        // The Dash coroutine handles the velocity
         if (isDashing) return;
-
-        // Apply Normal Movement
-        // Note: keeping your 'linearVelocity' syntax for Unity 6
+        // Apply normal movement
         rb.linearVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z);
     }
 
-    // --- DASH LOGIC ---
-    IEnumerator Dash()
+    IEnumerator DashRoutine()
     {
         isDashing = true;
         canDash = false;
 
-        // determine dash direction
-        // If we are moving, dash that way. If standing still, dash in the direction we last faced.
-        Vector3 dashDir = lastMoveDir;
-        
-        // Fallback: If game just started and we haven't moved yet, dash forward
-        if (dashDir == Vector3.zero) dashDir = visualObj.forward; 
+        // 1. START VISUALS
+        if (dashTrail != null) dashTrail.emitting = true;
+        if (dashCooldownImage != null) dashCooldownImage.fillAmount = 0; // Empty the UI icon
 
-        // Apply instant dash velocity
-        // We preserve Y velocity so gravity still works (you don't fly if you dash off a cliff)
+        // 2. APPLY VELOCITY
+        Vector3 dashDir = lastMoveDir;
+        if (dashDir == Vector3.zero) dashDir = visualObj.forward;
+        
         rb.linearVelocity = new Vector3(dashDir.x * dashSpeed, rb.linearVelocity.y, dashDir.z * dashSpeed);
 
-        // Wait for the dash to finish
+        // 3. WAIT FOR DASH DURATION
         yield return new WaitForSeconds(dashDuration);
 
+        // 4. STOP DASHING & TRAIL
         isDashing = false;
+        if (dashTrail != null) dashTrail.emitting = false;
 
-        // Wait for cooldown
-        yield return new WaitForSeconds(dashCooldown);
+        // 5. HANDLE COOLDOWN (Animation)
+        float timer = 0f;
+        while (timer < dashCooldown)
+        {
+            timer += Time.deltaTime;
+            // Update UI smoothly
+            if (dashCooldownImage != null)
+            {
+                dashCooldownImage.fillAmount = timer / dashCooldown;
+            }
+            yield return null; // Wait for next frame
+        }
+
+        // 6. COOLDOWN FINISHED
+        if (dashCooldownImage != null) dashCooldownImage.fillAmount = 1;
         canDash = true;
     }
 }

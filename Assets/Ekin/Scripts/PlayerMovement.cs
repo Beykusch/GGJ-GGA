@@ -17,6 +17,10 @@ public class PlayerMovement : MonoBehaviour
     public TrailRenderer dashTrail;
     public Image dashCooldownImage;
 
+    [Header("Knockback Settings (YENİ)")]
+    public float knockbackStunTime = 0.5f; // Havada kontrolsüz kalma süresi
+    public float recoveryDuration = 1.0f;  // Yere indikten sonra hızlanma süresi
+
     private Rigidbody rb;
     private Transform camTransform;
 
@@ -25,9 +29,10 @@ public class PlayerMovement : MonoBehaviour
 
     private bool isDashing = false;
     private bool canDash = true;
+    private bool isKnockedBack = false;
 
-    // --- YENİ EKLENEN DEĞİŞKEN ---
-    private bool isKnockedBack = false; // Savrulma kilidi
+    // Orijinal hızı hafızada tutmak için
+    private float defaultMoveSpeed;
 
     void Start()
     {
@@ -36,11 +41,13 @@ public class PlayerMovement : MonoBehaviour
 
         if (dashTrail != null) dashTrail.emitting = false;
         if (dashCooldownImage != null) dashCooldownImage.fillAmount = 1;
+
+        // Başlangıç hızını kaydet (Ayılınca bu hıza döneceğiz)
+        defaultMoveSpeed = moveSpeed;
     }
 
     void Update()
     {
-        // --- DEĞİŞİKLİK 1: Savruluyorsak Input alma ---
         if (isDashing || isKnockedBack) return;
 
         // --- INPUTS ---
@@ -80,36 +87,55 @@ public class PlayerMovement : MonoBehaviour
 
     void FixedUpdate()
     {
-        // --- DEĞİŞİKLİK 2: Savruluyorsak Hareketi Ezme ---
         if (isDashing || isKnockedBack) return;
 
-        // Apply normal movement
         rb.linearVelocity = new Vector3(moveVelocity.x, rb.linearVelocity.y, moveVelocity.z);
     }
 
-    // --- YENİ EKLENEN FONKSİYON: DIŞARIDAN ÇAĞRILACAK ---
     public void GetKnockedBack(Vector3 direction, float force)
     {
-        isKnockedBack = true; // Inputları kilitle
+        // Eğer zaten havadaysak tekrar vurulunca bug olmasın, mevcut coroutine'i durdur
+        StopAllCoroutines();
 
-        // Mevcut hızı sıfırla (Temiz bir uçuş için)
+        // Hızı ve Inputu sıfırla
+        isKnockedBack = true;
+        moveSpeed = defaultMoveSpeed; // Hız bozulmuşsa düzelt
+
         rb.linearVelocity = Vector3.zero;
-
-        // Gücü uygula (Impulse: Anlık Patlama Gücü)
         rb.AddForce(direction * force, ForceMode.Impulse);
 
-        // İyileşme sürecini başlat
         StartCoroutine(RecoverFromKnockback());
     }
 
-    // --- YENİ EKLENEN COROUTINE: İYİLEŞME SÜRECİ ---
+    // --- BU KISIM GÜNCELLENDİ: YAVAŞ TOPARLANMA ---
     IEnumerator RecoverFromKnockback()
     {
-        // 0.5 saniye (veya ne kadar sürsün istersen) bekle
-        yield return new WaitForSeconds(0.5f);
+        // 1. AŞAMA: TAM KİLİT (Havada uçma evresi)
+        yield return new WaitForSeconds(knockbackStunTime);
 
-        // Kontrolü oyuncuya geri ver
+        // Input kilidini aç
         isKnockedBack = false;
+
+        // 2. AŞAMA: YAVAŞ ÇEKİM (Ayılma evresi)
+        // Hızı çok düşür (Örn: Normalin %20'si)
+        float startSpeed = defaultMoveSpeed * 0.2f;
+        moveSpeed = startSpeed;
+
+        float timer = 0f;
+
+        // Belirlenen süre boyunca hızı yavaş yavaş artır (Lerp)
+        while (timer < recoveryDuration)
+        {
+            timer += Time.deltaTime;
+
+            // Hızı zamanla %20'den %100'e çek
+            moveSpeed = Mathf.Lerp(startSpeed, defaultMoveSpeed, timer / recoveryDuration);
+
+            yield return null; // Bir sonraki kareyi bekle
+        }
+
+        // 3. AŞAMA: NORMALE DÖNÜŞ
+        moveSpeed = defaultMoveSpeed;
     }
 
     IEnumerator DashRoutine()
@@ -117,36 +143,28 @@ public class PlayerMovement : MonoBehaviour
         isDashing = true;
         canDash = false;
 
-        // 1. START VISUALS
         if (dashTrail != null) dashTrail.emitting = true;
         if (dashCooldownImage != null) dashCooldownImage.fillAmount = 0;
 
-        // 2. APPLY VELOCITY
         Vector3 dashDir = lastMoveDir;
         if (dashDir == Vector3.zero) dashDir = visualObj.forward;
 
         rb.linearVelocity = new Vector3(dashDir.x * dashSpeed, rb.linearVelocity.y, dashDir.z * dashSpeed);
 
-        // 3. WAIT FOR DASH DURATION
         yield return new WaitForSeconds(dashDuration);
 
-        // 4. STOP DASHING & TRAIL
         isDashing = false;
         if (dashTrail != null) dashTrail.emitting = false;
 
-        // 5. HANDLE COOLDOWN (Animation)
         float timer = 0f;
         while (timer < dashCooldown)
         {
             timer += Time.deltaTime;
             if (dashCooldownImage != null)
-            {
                 dashCooldownImage.fillAmount = timer / dashCooldown;
-            }
             yield return null;
         }
 
-        // 6. COOLDOWN FINISHED
         if (dashCooldownImage != null) dashCooldownImage.fillAmount = 1;
         canDash = true;
     }

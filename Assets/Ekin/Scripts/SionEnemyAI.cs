@@ -37,6 +37,11 @@ public class SionEnemyAI : MonoBehaviour
     [Header("Proximity Parameters")]
     public float proximityMinDistance = 2f;  // Closest distance (= proximity 100)
     public float proximityMaxDistance = 50f; // Farthest distance (= proximity 0)
+    
+    [Header("Wolf Sound")]
+    [SerializeField] private float wolfSoundInterval = 0.6f; // How often to play wolf sound while chasing
+    [SerializeField] private float wolfSoundTimer = 0f;
+    private bool isPlayingWolfSound = false;
 
     // --- BİLEŞENLER ---
     private Rigidbody rb;
@@ -82,6 +87,26 @@ public class SionEnemyAI : MonoBehaviour
     {
         UpdateAnimationState();
         HandleSpriteFlip();
+        UpdateWolfSound();
+    }
+    
+    //Update Wolf Sound Based on State
+    void UpdateWolfSound()
+    {
+        // Sound only when chasing
+        if (currentState == EnemyState.Chasing)
+        {
+            wolfSoundTimer += Time.deltaTime;
+
+            if (wolfSoundTimer >= wolfSoundInterval)
+            {
+                AudioManager.I.PlayWolfSound(transform.position);
+                wolfSoundTimer = 0f;
+            }
+        }else
+        {
+            wolfSoundTimer = 0f;
+        }
     }
 
     // --- FİZİKSEL HAREKETLER ---

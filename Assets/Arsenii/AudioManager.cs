@@ -14,8 +14,10 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private EventReference shootEvent;
     [SerializeField] private EventReference dashEvent;
     
+    
     [Header("Enemy Sounds")]
     [SerializeField] private EventReference enemyAttackEvent;
+    [SerializeField] private EventReference wolfSoundEvent;
     
     
     
@@ -66,5 +68,10 @@ public class AudioManager : MonoBehaviour
     {
         if (!enemyAttackEvent.IsNull)
             RuntimeManager.PlayOneShot(enemyAttackEvent, position);
+    }
+    public void PlayWolfSound(Vector3 position)
+    {
+        if (!wolfSoundEvent.IsNull)
+            RuntimeManager.PlayOneShot(wolfSoundEvent, position);
     }
 }

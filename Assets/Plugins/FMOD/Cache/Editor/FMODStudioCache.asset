@@ -42,7 +42,7 @@ MonoBehaviour:
   Path: Assets/Arsenii/FMOD Build/Desktop/Music.bank
   Name: Music
   StudioPath: bank:/Music
-  lastModified: 639055347830727300
+  lastModified: 639055562089511491
   FileSizes: []
   Exists: 1
 --- !u!114 &-4622336404343488713
@@ -170,7 +170,7 @@ MonoBehaviour:
   Path: Assets/Arsenii/FMOD Build/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639055347830472662
+  lastModified: 639055562089195848
   FileSizes:
   - Name: 
     Value: 1356
@@ -208,7 +208,7 @@ MonoBehaviour:
   StringsBanks:
   - {fileID: -131181294192909714}
   cacheVersion: 131858
-  cacheTime: 639055347830727300
+  cacheTime: 639055562089511491
   SerializableEventsDict:
   - key: event:/SFX/Player/MaskSwap
     index: 0
@@ -245,7 +245,7 @@ MonoBehaviour:
   Path: Assets/Arsenii/FMOD Build/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639055347830462648
+  lastModified: 639055562089195848
   FileSizes: []
   Exists: 1
 --- !u!114 &888966312723475595

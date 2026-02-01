@@ -1,6 +1,51 @@
 ﻿using UnityEngine;
 using System.Collections;
 
+public class SionAnimationControl : MonoBehaviour
+{
+    private Animator anim;
+    private SpriteRenderer sr;
+    private Rigidbody2D rb; // Eğer Rigidbody kullanıyorsan
+
+    void Start()
+    {
+        anim = GetComponent<Animator>();
+        sr = GetComponentInChildren<SpriteRenderer>(); // Görselin genelde child objededir
+        rb = GetComponent<Rigidbody2D>();
+    }
+
+    [System.Obsolete]
+    void Update()
+    {
+        // 1. Hız bilgisini al (Rigidbody veya NavMeshAgent'tan)
+        // Unity 6'da linearVelocity yerine normal velocity de kullanılabilir ama garanti olsun:
+        Vector2 velocity = rb.velocity;
+
+        // 2. Hareket var mı kontrolü (0.1'den büyükse hareketli say)
+        bool isMoving = velocity.magnitude > 0.1f;
+
+        // 3. Animator parametrelerini güncelle
+        anim.SetBool("IsMoving", isMoving);
+
+        if (isMoving)
+        {
+            // Hareket yönünü Animator'a gönder (-1 ile 1 arasında)
+            anim.SetFloat("InputX", velocity.x);
+            anim.SetFloat("InputY", velocity.y);
+
+            // 4. Sprite Yönünü Çevirme (Flip)
+            // Eğer sağa gidiyorsa düz, sola gidiyorsa ters çevir
+            if (velocity.x > 0.1f)
+            {
+                sr.flipX = false; // Orijinal yön (Sağ)
+            }
+            else if (velocity.x < -0.1f)
+            {
+                sr.flipX = true; // Aynalanmış yön (Sol)
+            }
+        }
+    }
+}
 public class SionEnemyAI : MonoBehaviour
 {
     // Düşmanın Olası Durumları

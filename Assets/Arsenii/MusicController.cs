@@ -101,8 +101,8 @@ public class MusicController : MonoBehaviour
 
     public void SetProximity(float targetProximity)
     {
-        // Fixed: Clamp signature is (value, min, max), not (value, max, min)
-        targetProximity = Mathf.Clamp(targetProximity, 1f, 100f);
+        // Clamp to FMOD proximity range: 0 (far) to 50 (close)
+        targetProximity = Mathf.Clamp(targetProximity, 0f, 50f);
 
         float k = 1f - Mathf.Exp(-proximitySmoothSpeed * Time.deltaTime);
         currentProximity = Mathf.Lerp(currentProximity, targetProximity, k);
@@ -110,7 +110,7 @@ public class MusicController : MonoBehaviour
         inst.setParameterByName(proximityParam, currentProximity);
         
         // Для отладки
-        Debug.LogWarning($"[MusicController] SetProximity: {currentProximity:F2}");
+        //Debug.LogWarning($"[MusicController] SetProximity: {currentProximity:F2}");
     }
 
     public void ResetProximityFar()

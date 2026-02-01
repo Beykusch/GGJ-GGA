@@ -133,10 +133,10 @@ public class SionEnemyAI : MonoBehaviour
     {
         float distance = Vector3.Distance(transform.position, playerTarget.position);
         
-        // Update Proximity - convert distance to 0-100 scale (100=close, 0=far)
+        // Update Proximity - convert distance to 0-50 scale (50=close, 0=far)
         if (MusicController._mc != null)
         {
-            float proximityValue = Mathf.Clamp01((proximityMaxDistance - distance) / (proximityMaxDistance - proximityMinDistance)) * 100f;
+            float proximityValue = Mathf.Clamp01((proximityMaxDistance - distance) / (proximityMaxDistance - proximityMinDistance)) * 50f;
             MusicController._mc.SetProximity(proximityValue);
         }
 

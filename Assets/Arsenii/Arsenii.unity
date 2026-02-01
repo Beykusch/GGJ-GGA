@@ -679,11 +679,11 @@ MonoBehaviour:
     Path: event:/SFX/Player/Dash
   enemyAttackEvent:
     Guid:
-      Data1: 0
-      Data2: 0
-      Data3: 0
-      Data4: 0
-    Path: 
+      Data1: -669086820
+      Data2: 1137888676
+      Data3: -1248178782
+      Data4: 869552113
+    Path: event:/SFX/NPC/Enemy/Attack
 --- !u!4 &1411787576
 Transform:
   m_ObjectHideFlags: 0

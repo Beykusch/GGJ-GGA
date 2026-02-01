@@ -397,7 +397,7 @@ MonoBehaviour:
   StringsBanks:
   - {fileID: 9187610488339495735}
   cacheVersion: 131858
-  cacheTime: 639055345564915418
+  cacheTime: 639055397536208758
   SerializableEventsDict:
   - key: event:/SFX/Player/MaskSwap
     index: 0
@@ -452,7 +452,7 @@ MonoBehaviour:
   Path: Assets/Arsenii/FMOD Build/Desktop/Music.bank
   Name: Music
   StudioPath: bank:/Music
-  lastModified: 639055345564915418
+  lastModified: 639055397536208758
   FileSizes: []
   Exists: 1
 --- !u!114 &543387383079290893
@@ -470,7 +470,7 @@ MonoBehaviour:
   Name: Proximity
   StudioPath: 
   Min: 0
-  Max: 100
+  Max: 50
   Default: 0
   ID:
     data1: 1380852789
@@ -494,7 +494,7 @@ MonoBehaviour:
   Path: Assets/Arsenii/FMOD Build/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639055345564765399
+  lastModified: 639055397535508138
   FileSizes: []
   Exists: 1
 --- !u!114 &888966312723475595
@@ -781,7 +781,7 @@ MonoBehaviour:
   Path: Assets/Arsenii/FMOD Build/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639055345564770812
+  lastModified: 639055397535522635
   FileSizes:
   - Name: 
     Value: 1356

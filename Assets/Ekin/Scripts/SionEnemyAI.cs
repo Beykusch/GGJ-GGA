@@ -128,9 +128,16 @@ public class SionEnemyAI : MonoBehaviour
     void HandleChasing()
     {
         float distance = Vector3.Distance(transform.position, playerTarget.position);
+        
+        // Update Proximity
+        if (MusicController._mc != null)
+            MusicController._mc.SetProximity(distance);
 
         if (distance <= attackTriggerDistance)
         {
+            if (MusicController._mc != null)
+                MusicController._mc.SetActFight();
+            
             StartCoroutine(PerformDashAttack());
             return;
         }
@@ -147,6 +154,9 @@ public class SionEnemyAI : MonoBehaviour
     // --- MANTIK: SION R (DASH SALDIRISI) ---
     IEnumerator PerformDashAttack()
     {
+        //play attack sound
+        AudioManager.I.PlayEnemyAttack(transform.position);
+
         currentState = EnemyState.Charging;
 
         // BUG FIX: Dash başlangıcında yüzünü oyuncuya döndür
@@ -188,6 +198,9 @@ public class SionEnemyAI : MonoBehaviour
             currentState = EnemyState.Chasing;
             rb.linearVelocity = Vector3.zero;
         }
+        
+        if (MusicController._mc != null)
+            MusicController._mc.ResetProximityFar();
     }
 
     // --- MANTIK: STUN (SERSEMLEME) ---

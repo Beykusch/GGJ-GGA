@@ -352,11 +352,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   moveSpeed: 6
   visualObj: {fileID: 6714675140819141252}
+  anim: {fileID: 0}
   dashSpeed: 20
   dashDuration: 0.2
   dashCooldown: 1
   dashTrail: {fileID: 4087452384531523616}
   dashCooldownImage: {fileID: 0}
+  knockbackStunTime: 0.5
+  knockbackFriction: 5
+  recoveryDuration: 1.5
+  footstepsTimer: 0
+  footstepsInterval: 0.4
 --- !u!114 &3276623852863934556
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -426,6 +432,7 @@ GameObject:
   - component: {fileID: 3941209568436041481}
   - component: {fileID: 2633607829594013753}
   - component: {fileID: 2432759811308463462}
+  - component: {fileID: 4192394677677774226}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -583,3 +590,17 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
   CustomBlends: {fileID: 0}
+--- !u!114 &4192394677677774226
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8690391213678150535}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 86c6556701af9e04380698b89f691b6e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  nonRigidbodyVelocity: 0
+  attenuationObject: {fileID: 0}

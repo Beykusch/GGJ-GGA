@@ -19,7 +19,7 @@ public class MusicController : MonoBehaviour
     [SerializeField] private int redMaskLayerId;
 
     private EventInstance inst;
-    private float currentProximity = 100f;
+    private float currentProximity = 1f;
     private bool started;
 
     private void OnMaskChanged(int activeLayer)
@@ -101,8 +101,8 @@ public class MusicController : MonoBehaviour
 
     public void SetProximity(float targetProximity)
     {
-        // Исправлен порядок аргументов: min=1, max=100
-        targetProximity = Mathf.Clamp(targetProximity, 100f, 1f);
+        // Fixed: Clamp signature is (value, min, max), not (value, max, min)
+        targetProximity = Mathf.Clamp(targetProximity, 1f, 100f);
 
         float k = 1f - Mathf.Exp(-proximitySmoothSpeed * Time.deltaTime);
         currentProximity = Mathf.Lerp(currentProximity, targetProximity, k);
@@ -110,7 +110,7 @@ public class MusicController : MonoBehaviour
         inst.setParameterByName(proximityParam, currentProximity);
         
         // Для отладки
-        Debug.Log($"[MusicController] SetProximity: {currentProximity:F2}");
+        Debug.LogWarning($"[MusicController] SetProximity: {currentProximity:F2}");
     }
 
     public void ResetProximityFar()

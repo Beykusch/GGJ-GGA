@@ -34,6 +34,10 @@ public class SionEnemyAI : MonoBehaviour
     [Tooltip("Düşük değer = Zor döner (Araba gibi), Yüksek değer = Hemen döner")]
     public float dashTurnRate = 30f;
 
+    [Header("Proximity Parameters")]
+    public float proximityMinDistance = 2f;  // Closest distance (= proximity 100)
+    public float proximityMaxDistance = 50f; // Farthest distance (= proximity 0)
+
     // --- BİLEŞENLER ---
     private Rigidbody rb;
     private Animator anim;
@@ -129,9 +133,12 @@ public class SionEnemyAI : MonoBehaviour
     {
         float distance = Vector3.Distance(transform.position, playerTarget.position);
         
-        // Update Proximity
+        // Update Proximity - convert distance to 0-100 scale (100=close, 0=far)
         if (MusicController._mc != null)
-            MusicController._mc.SetProximity(distance);
+        {
+            float proximityValue = Mathf.Clamp01((proximityMaxDistance - distance) / (proximityMaxDistance - proximityMinDistance)) * 100f;
+            MusicController._mc.SetProximity(proximityValue);
+        }
 
         if (distance <= attackTriggerDistance)
         {

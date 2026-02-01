@@ -16,15 +16,25 @@ public class MusicController : MonoBehaviour
     [Header("Proximity smoothing")]
     [SerializeField] private float proximitySmoothSpeed = 4f;
 
+    [SerializeField] private int redMaskLayerId;
+
     private EventInstance inst;
     private float currentProximity = 100f;
     private bool started;
 
+    private void OnMaskChanged(int activeLayer)
+    {
+        Debug.Log($"[MusicController] OnMaskChanged: activeLayer={activeLayer}, redMaskLayerId={redMaskLayerId}");
+        if (activeLayer == redMaskLayerId)
+            SetActRedMaskOn();
+        else
+            SetActBasic();
+    }
+
     void Awake()
     {
-        
         Debug.Log("MusicController Awake");
-        
+
         if (_mc != null)
         {
             Destroy(gameObject);
@@ -38,19 +48,37 @@ public class MusicController : MonoBehaviour
         inst.start();
         started = true;
 
-        // Safe defaults
         inst.setParameterByNameWithLabel(actParam, "Basic");
         inst.setParameterByName(proximityParam, 100f);
     }
 
+    void Start()
+    {
+        Debug.Log("[MusicController] Start called");
+
+        if (MaskController.Instance != null)
+        {
+            MaskController.Instance.OnMaskChanged += OnMaskChanged;
+            Debug.Log("[MusicController] Subscribed to OnMaskChanged");
+        }
+        else
+        {
+            Debug.LogError("[MusicController] MaskController.Instance is NULL in Start!");
+        }
+    }
+
     void OnDestroy()
     {
+        if (MaskController.Instance != null)
+        {
+            MaskController.Instance.OnMaskChanged -= OnMaskChanged;
+        }
+
         if (!started) return;
 
         inst.stop(FMOD.Studio.STOP_MODE.IMMEDIATE);
         inst.release();
     }
-    
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.P))
@@ -63,7 +91,7 @@ public class MusicController : MonoBehaviour
         => inst.setParameterByNameWithLabel(actParam, "Basic");
 
     public void SetActRedMaskOn()
-        => inst.setParameterByNameWithLabel(actParam, "RedMaskON");
+        => inst.setParameterByNameWithLabel(actParam, "Red Mask On");
 
     public void SetActFight()
         => inst.setParameterByNameWithLabel(actParam, "Fighting");
@@ -74,7 +102,7 @@ public class MusicController : MonoBehaviour
     public void SetProximity(float targetProximity)
     {
         // Исправлен порядок аргументов: min=1, max=100
-        targetProximity = Mathf.Clamp(targetProximity, 1f, 100f);
+        targetProximity = Mathf.Clamp(targetProximity, 100f, 1f);
 
         float k = 1f - Mathf.Exp(-proximitySmoothSpeed * Time.deltaTime);
         currentProximity = Mathf.Lerp(currentProximity, targetProximity, k);

@@ -13,6 +13,12 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private EventReference landEvent;
     [SerializeField] private EventReference shootEvent;
     [SerializeField] private EventReference dashEvent;
+    
+    [Header("Enemy Sounds")]
+    [SerializeField] private EventReference enemyAttackEvent;
+    
+    
+    
 
     void Awake()
     {
@@ -28,6 +34,7 @@ public class AudioManager : MonoBehaviour
 
     public void PlayFootstep(Vector3 position)
     {
+        Debug.Log("footstep sound played");
         if (!footstepEvent.IsNull)
             RuntimeManager.PlayOneShot(footstepEvent, position);
     }
@@ -54,5 +61,10 @@ public class AudioManager : MonoBehaviour
     {
         if (!dashEvent.IsNull)
             RuntimeManager.PlayOneShot(dashEvent, position);
+    }
+    public void PlayEnemyAttack(Vector3 position)
+    {
+        if (!enemyAttackEvent.IsNull)
+            RuntimeManager.PlayOneShot(enemyAttackEvent, position);
     }
 }

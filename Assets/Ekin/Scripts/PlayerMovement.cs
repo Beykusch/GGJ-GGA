@@ -18,10 +18,17 @@ public class PlayerMovement : MonoBehaviour
     public TrailRenderer dashTrail;
     public Image dashCooldownImage;
 
-    [Header("Knockback & Recovery (HİBRİT SİSTEM)")]
+    [Header("Knockback & Recovery (HYBRID SYSTEM)")]
     public float knockbackStunTime = 0.5f;
     public float knockbackFriction = 5f;
     public float recoveryDuration = 1.5f;
+
+    [Header("Sound")] 
+    [SerializeField] private float footstepsTimer = 0f;
+    [SerializeField] private float footstepsInterval = 0.4f; // interval between footsteps sounds
+    
+    private bool isMoving = false;
+    
 
     private Rigidbody rb;
     private Transform camTransform;
@@ -84,6 +91,7 @@ public class PlayerMovement : MonoBehaviour
         {
             if (camTransform != null)
             {
+                
                 // Kamera açısına göre yön belirleme
                 Vector3 camForward = camTransform.forward;
                 Vector3 camRight = camTransform.right;
@@ -118,6 +126,22 @@ public class PlayerMovement : MonoBehaviour
             // Dash atarken de yön verisi gönderiyoruz
             StartCoroutine(DashRoutine(inputX, inputZ));
         }
+        
+        // -- Footstep sound logic -- 
+        if (isMoving)
+        {
+            footstepsTimer += Time.deltaTime;
+            if (footstepsTimer >= footstepsInterval)
+            {
+                Debug.Log("Footstep sound triggered");
+                AudioManager.I.PlayFootstep(transform.position);
+                footstepsTimer = 0f;
+            }
+        }
+        else
+        {
+            footstepsTimer = footstepsInterval;
+        }
     }
 
     void UpdateAnimations(float x, float y)
@@ -126,7 +150,7 @@ public class PlayerMovement : MonoBehaviour
 
         // Hareket ediyor mu? (Input var mı VE Stun durumu yok mu?)
         bool hasInput = new Vector2(x, y).sqrMagnitude > 0.1f;
-        bool isMoving = hasInput && !isInputLocked;
+        isMoving = hasInput && !isInputLocked;
 
         anim.SetBool("IsMoving", isMoving);
 
@@ -199,6 +223,9 @@ public class PlayerMovement : MonoBehaviour
         isDashing = true;
         canDash = false;
         knockbackVelocity = Vector3.zero;
+        
+        //--Dash sound--
+        AudioManager.I.DashShot(transform.position);
 
         // 1. ANIMASYON AYARLARI (4 YÖNLÜ SNAP)
         if (anim != null)

@@ -2,6 +2,7 @@
 using UnityEngine.UI;
 using System.Collections.Generic;
 using System;
+using System.Collections;
 
 public class MaskController : MonoBehaviour
 {
@@ -14,6 +15,7 @@ public class MaskController : MonoBehaviour
         public string name;             // Editörde karışmasın diye isim (örn: "Kirmizi Maske")
         public GameObject maskObj;      // Açıp kapatacağımız ana obje (örn: "Mask1")
         public SpriteRenderer renderer; // İçindeki Sprite Renderer (örn: "MaskSpriteRed")
+        public Sprite uiIcon;
         
         [Header("Sprites")]
         public Sprite frontSprite;      // Aşağı bakarken
@@ -40,14 +42,21 @@ public class MaskController : MonoBehaviour
     [Header("UI Setup")]
     public Image screenFilter;
     public List<Color> maskColors;
+    public RectTransform maskIconContainer; // The parent object of your icons
+    public float transitionDuration = 0.3f;
 
     [Header("Debug")]
     public int currentMaskIndex = -1; 
+
+    private Coroutine _uiEffectRoutine;
+    private Vector3 _originalFilterScale;
 
     void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        if (screenFilter != null) _originalFilterScale = screenFilter.rectTransform.localScale;
     }
 
     void Start()
@@ -56,6 +65,17 @@ public class MaskController : MonoBehaviour
         foreach (var mask in availableMasks)
         {
             if(mask.maskObj != null) mask.maskObj.SetActive(false);
+        }
+
+        if (screenFilter != null)
+        {
+        screenFilter.color = Color.clear;
+        screenFilter.rectTransform.localScale = Vector3.one;
+        }
+
+        if (maskIconContainer != null)
+        {
+        maskIconContainer.localScale = Vector3.one;
         }
 
         currentMaskIndex = -1;
@@ -88,7 +108,45 @@ public class MaskController : MonoBehaviour
         {
             currentMaskIndex = targetIndex;
             ApplyMaskLogic();
+            TriggerCoolEffects();
         }
+    }
+
+    void TriggerCoolEffects()
+    {
+        if (_uiEffectRoutine != null) StopCoroutine(_uiEffectRoutine);
+        _uiEffectRoutine = StartCoroutine(VisualTransitionRoutine());
+    }
+
+    IEnumerator VisualTransitionRoutine()
+    {
+        float elapsed = 0;
+        Color startColor = screenFilter.color;
+        Color targetColor = currentMaskIndex == -1 ? Color.clear : maskColors[currentMaskIndex];
+        
+        // Impact Phase: Quick scale bump and high intensity
+        screenFilter.rectTransform.localScale = _originalFilterScale * 1.05f;
+
+        while (elapsed < transitionDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = elapsed / transitionDuration;
+            
+            // Smoothly lerp color and snap scale back
+            screenFilter.color = Color.Lerp(startColor, targetColor, t);
+            screenFilter.rectTransform.localScale = Vector3.Lerp(screenFilter.rectTransform.localScale, _originalFilterScale, t);
+            
+            // Subtle UI Icon "Pop"
+            if (maskIconContainer != null)
+            {
+                maskIconContainer.localScale = Vector3.one * (1f + (Mathf.Sin(t * Mathf.PI) * 0.1f));
+            }
+
+            yield return null;
+        }
+        
+        screenFilter.color = targetColor;
+        screenFilter.rectTransform.localScale = _originalFilterScale;
     }
 
     void ApplyMaskLogic()

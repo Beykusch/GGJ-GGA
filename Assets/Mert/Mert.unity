@@ -490,7 +490,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 632d37d50c7984d459e924f9c265b8a3, type: 2}
+  - {fileID: 2100000, guid: aa735e80f85f22643b8da6fb99ea7aef, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1498,6 +1498,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 549250104930087523, guid: 5ddc58a2d275d2e4f8d4993ed5f6c6fe, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 38.487274
+      objectReference: {fileID: 0}
+    - target: {fileID: 549250104930087523, guid: 5ddc58a2d275d2e4f8d4993ed5f6c6fe, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 21.57474
+      objectReference: {fileID: 0}
+    - target: {fileID: 4851627433148696247, guid: 5ddc58a2d275d2e4f8d4993ed5f6c6fe, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 4.5428
+      objectReference: {fileID: 0}
+    - target: {fileID: 4851627433148696247, guid: 5ddc58a2d275d2e4f8d4993ed5f6c6fe, type: 3}
+      propertyPath: m_LocalScale.y
+      value: 4.5428
+      objectReference: {fileID: 0}
+    - target: {fileID: 4851627433148696247, guid: 5ddc58a2d275d2e4f8d4993ed5f6c6fe, type: 3}
+      propertyPath: m_LocalScale.z
+      value: 4.5428
+      objectReference: {fileID: 0}
     - target: {fileID: 8680719810363806485, guid: 5ddc58a2d275d2e4f8d4993ed5f6c6fe, type: 3}
       propertyPath: m_Name
       value: Canvas
